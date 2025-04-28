@@ -1,6 +1,6 @@
 ---
-title: "Introduction to INLA for geospatial modelling"
-author: "Punam Amratia, Susan Rumisha, Andre Python and Penny Hancock"
+title: "Introduction à INLA pour la modélisation géospatiale"
+author: "Ousmane Diao Punam Amratia, Susan Rumisha, Andre Python and Penny Hancock"
 output: 
   prettydoc::html_pretty:
     theme: cayman
