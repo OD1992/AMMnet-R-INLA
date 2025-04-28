@@ -1,0 +1,21 @@
+---
+title: "Introduction à INLA pour la modélisation géospatiale"
+author: "Punam Amratia, Susan Rumisha, Andre Python et Penny Hancock"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+...
+
+(fichier complet tel que vu dans la dernière mise à jour)
+
