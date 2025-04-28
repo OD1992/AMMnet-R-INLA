@@ -16,90 +16,72 @@ knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 ```
 
-The following presentation is to accompany this tutorial can be found
+La présentation associée à ce tutoriel est disponible 
 <a href= https://docs.google.com/presentation/d/1KRrZjiBx_UKETtN-EyEQxMWXAOUxlaMdTzqpPSPMxPc/edit#slide=id.g33fbbb4edf_0_14>HERE</a>
 
-## Overview
+## Vue d'ensemble
 
-In this workshop we will be taking through an example of how to use the
-SPDE model using the R-INLA package. We will analyse parasite prevalence
-data from Madagascar. The topics we will cover include:
+Dans cet atelier, nous illustrerons comment utiliser le modèle SPDE avec le package R-INLA. Nous analyserons des données de prévalence parasitaire de Madagascar. Nous aborderons :
 
--   How to create a mesh for the continuously indexed spatial effects
--   Implementing the SPDE model in R-INLA
--   Conducting simple model selection and best fit model
--   Spatial prediction using R-INLA within and outside the fitting
-    function ("inla")
--   Model validation
+- Comment créer un maillage pour les effets spatiaux continus
+- Implémentation du modèle SPDE avec R-INLA
+- Sélection simple du meilleur modèle
+- Prédiction spatiale avec et en dehors de "inla"
+- Validation du modèle
 
-For a much more thorough description of R-INLA and the details
-underlying the SPDE models, please see
+Pour des détails approfondis, voir
 <a href = https://www.jstatsoft.org/index.php/jss/article/view/v063i19/v63i19.pdf>Harvard
 & Rue 2015</a>
 
-### 1. Data
+### 1. Données
 
-We recommend downloading the Rproject file from
-<https://github.com/PunamA/BDI_INLA>. First, download the zip file.
-Unzip and click the `BDI_INLA.Rproj` file. We recommend you to use the
-`Intro_to_INLA_students.R` Script. In case you want to get further
-details (or answers to any coding questions), we have provided you with
-our instructor script as well.
+Téléchargez le projet à partir de <https://github.com/PunamA/BDI_INLA> : unzippez et ouvrez `BDI_INLA.Rproj`. Utilisez `Intro_to_INLA_students.R`.
 
-**Malaria prevalence data**: Open-access malaria data hosted by the
-<a href=https://malariaatlas.org/pr-survey-data/>Malaria Atlas
-Project</a> accessed using the malariaAtlas R package. We are using
-Madagascar for this example. (Note: we have pulled the latest MIS for
-Madagascar 2021)
+**Données de prévalence** : disponibles via le <a href=https://malariaatlas.org/pr-survey-data/>Malaria Atlas Project</a> (données MIS Madagascar 2021)
 
-**Covariate data**: a suite of satellite imagery provided by MAP has
-been cleaned and processed for this tutorial. The data is available upon
-<a href="https://malariaatlas.org/contact-us/">request from MAP</a> For
-data cleaning and the preparation work please run the R-Script
-`data_prep.R`
+**Covariables** : Images satellites nettoyées, accessibles sur demande.
 
 ```{r data, eval = FALSE, echo = FALSE}
 source('data_prep.R')
 ```
 
-For this tutorial, you do not need to run the preparation work script.
-The cleaned version of the data is available in `input/MDG_clean.Rdata`
+FOu chargez directement :
 
 ```{r}
 load('input/MDG_clean.Rdata')
 ```
 
-### 2. Model Description
+### 2. Description du Modèle
 
-Let $Y_i$ be the number of people tested positive (e.g. for malaria)
-which can be modelled as a binomial.
+Soit $Y_i$ le nombre de tests positifs pour le paludisme. On modélise :
 
 $$
 Y_i \sim Binomial(p(s_i), N_i)
-$$ where $p(s_i)$ is the probability of positive for location $i$ and
-$N_i$ is the number of examined. The linear predictor is expressed as
-linear combinations (thus, "linear") of unknown parameters. The
-canonical link for the Binomial distribution is the logit function,
-which transforms probability [0,1] values into real values.
+$$
+
+avec $p(s_i)$ la probabilité d'être positif au site $i$ et $N_i$ le nombre testé.
+
+Le lien canonique pour une binomiale est la fonction logit :
 
 $$
 logit(p(s_i)) = \beta_0 + X(s)\beta + \psi(s_i)
-$$ where $\beta_0$ is the Intercept and $\beta$ is the covariate
-coefficient (slope). $\psi(s_i)$ is a gaussian field that can be
-approximated using a Gaussian Markov random field (GMRF) and can be
-represented as: $$
-\psi(s_i)\sim N(0,\Sigma)
-$$ where $\Sigma$ is a covariance matrix is determined by a spatial
-correlation function. In this case we will be using the Matern function:
+$$
+
+- $\beta_0$ : intercept
+- $\beta$ : coefficients des covariables
+- $\psi(s_i)$ : champ gaussien spatial, approché par un champ de Markov Gaussien (GMRF)
+
+Le champ spatial suit une covariance de type Matérn.
+
+Priors bayésiens posés sur tous les paramètres :
 
 $$
-\frac{\sigma^2}{\Gamma(\lambda)2^{\lambda - 1}}(\kappa\parallel s_i - s_j\parallel)^\lambda K_\lambda(\kappa\parallel s_i - s_j\parallel)
-$$ In this Bayesian context, we set priors for all parameters $$
-\theta \sim \pi(\theta)$$
+\theta \sim \pi(\theta)
+$$
 
-### 3. Libraries needed and Installation
+### 3. Bibliothèques nécessaires
 
-for installation please use
+Pour l'installation, veuillez utiliser ceci :
 
 ```{r}
 packages <- c("malariaAtlas", "raster", "sp", "tidyverse",
@@ -107,15 +89,13 @@ packages <- c("malariaAtlas", "raster", "sp", "tidyverse",
 if(length(setdiff(packages, rownames(installed.packages()))) > 0) { 
   install.packages(setdiff(packages, rownames(installed.packages()))) }
 
-#For INLA!!
+# Pour INLA!!
 if(length(setdiff("INLA", rownames(installed.packages()))) > 0){
   install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 }
 
 ```
-
-for this workshop we have included in the scripts the packages that need
-to be loaded:
+Chargement :
 
 ```{r}
 library(INLA)
@@ -127,28 +107,20 @@ library(lattice)
 library(gridExtra)
 ```
 
-### 4. Creating the SPDE model
+### 4. Création du modèle SPDE
 
-#### 4.1 The Mesh Construction
+#### 4.1 Construction du maillage
 
-Disclaimer: there is no rule to determine the right size and spatial
-extension of the mesh. It is up to the analyst to set the mesh
-parameters, which vary from case to case. Models based on mesh with a
-large number of vertices are more computationally demanding and may not
-necessarily lead to better results than coarser mesh. Therefore, we
-recommend using a relatively coarse mesh during the preliminary phase of
-the analysis and use a finer grid only as final step, when the results
-of the analysis are satisfactory. To get more details on how to build a
-mesh, see Section 2.1. of
-<a href=https://www.stat.washington.edu/peter/591/Lindgren.pdf>Lindgren
-and Rue paper</a>:
+Aucune règle universelle pour la taille du maillage. Maillage plus fin = coût calcul plus élevé.
 
-In order to create the mesh, we require the coordinated for the observed
-data points. In our analysis we also created the outline of the island
-boundary, but this isn't necessary.
+Coordonnées d'observation :
 
 ```{r}
 coords = cbind(MDG_pr_data$longitude, MDG_pr_data$latitude)
+```
+Création des bordures (facultatif) :
+
+```{r}
 bdry <- inla.sp2segment(MDG_shp)
 bdry$loc <- inla.mesh.map(bdry$loc)
 ```
